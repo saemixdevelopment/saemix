@@ -6,6 +6,6 @@ You can install the development version from `github`:
 
 ```
 library("devtools")
-install_github("saemixr/saemix" )
-library(saemixextension)
+install_github("saemixdevelopment/saemix" )
+library(saemix)
 ```
