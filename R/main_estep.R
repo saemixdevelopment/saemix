@@ -18,15 +18,26 @@ estep<-function(kiter, Uargs, Dargs, opt, structural.model, mean.phi, varList, D
 	VK<-rep(c(1:nb.etas),2)
 	mean.phiM<-do.call(rbind,rep(list(mean.phi),Uargs$nchains))
 	phiM[,varList$ind0.eta]<-mean.phiM[,varList$ind0.eta]
+	psiM<-transphi(phiM,Dargs$transform.par)
+	fpred<-structural.model(psiM, Dargs$IdM, Dargs$XM)
+	for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
+	gpred<-error(fpred,varList$pres,Dargs$XM$ytype)
+	DYF[Uargs$ind.ioM]<-0.5*((Dargs$yM-fpred)/gpred)^2+log(gpred)
+	U.y<-colSums(DYF)
 	
-	U.y<-compute.LLy(phiM,Uargs,Dargs,DYF,varList$pres)
-
 	etaM<-phiM[,varList$ind.eta]-mean.phiM[,varList$ind.eta,drop=FALSE]
 	phiMc<-phiM
 	for(u in 1:opt$nbiter.mcmc[1]) { # 1er noyau
 		etaMc<-matrix(rnorm(Dargs$NM*nb.etas),ncol=nb.etas)%*%chol.omega
 		phiMc[,varList$ind.eta]<-mean.phiM[,varList$ind.eta]+etaMc
-		Uc.y<-compute.LLy(phiMc,Uargs,Dargs,DYF,varList$pres)
+		psiMc<-transphi(phiMc,Dargs$transform.par)
+		fpred<-structural.model(psiMc, Dargs$IdM, Dargs$XM)
+		for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
+#		if(Dargs$error.model=="exponential")
+#			fpred<-log(cutoff(fpred))
+		gpred<-error(fpred,varList$pres,Dargs$XM$ytype)
+		DYF[Uargs$ind.ioM]<-0.5*((Dargs$yM-fpred)/gpred)^2+log(gpred)
+		Uc.y<-colSums(DYF)
 		deltau<-Uc.y-U.y
 		ind<-which(deltau<(-1)*log(runif(Dargs$NM)))
 		etaM[ind,]<-etaMc[ind,]
@@ -45,7 +56,14 @@ estep<-function(kiter, Uargs, Dargs, opt, structural.model, mean.phi, varList, D
 				#				cat('vk2=',vk2,' nrs2=',nrs2,"\n")
 				etaMc[,vk2]<-etaM[,vk2]+matrix(rnorm(Dargs$NM*nrs2), ncol=nrs2)%*%mydiag(varList$domega2[vk2,nrs2],nrow=1) # 2e noyau ? ou 1er noyau+permutation?
 				phiMc[,varList$ind.eta]<-mean.phiM[,varList$ind.eta]+etaMc
-				Uc.y<-compute.LLy(phiMc,Uargs,Dargs,DYF,varList$pres)
+				psiMc<-transphi(phiMc,Dargs$transform.par)
+				fpred<-structural.model(psiMc, Dargs$IdM, Dargs$XM)
+				for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
+#				if(Dargs$error.model=="exponential")
+#					fpred<-log(cutoff(fpred))
+				gpred<-error(fpred,varList$pres,Dargs$XM$ytype)
+				DYF[Uargs$ind.ioM]<-0.5*((Dargs$yM-fpred)/gpred)**2+log(gpred)
+				Uc.y<-colSums(DYF) # Warning: Uc.y, Uc.eta = vecteurs
 				Uc.eta<-0.5*rowSums(etaMc*(etaMc%*%somega))
 				deltu<-Uc.y-U.y+Uc.eta-U.eta
 				ind<-which(deltu<(-1)*log(runif(Dargs$NM)))
@@ -77,7 +95,14 @@ estep<-function(kiter, Uargs, Dargs, opt, structural.model, mean.phi, varList, D
 				etaMc<-etaM
 				etaMc[,vk2]<-etaM[,vk2]+matrix(rnorm(Dargs$NM*nrs2), ncol=nrs2)%*%mydiag(varList$domega2[vk2,nrs2])
 				phiMc[,varList$ind.eta]<-mean.phiM[,varList$ind.eta]+etaMc
-				Uc.y<-compute.LLy(phiMc,Uargs,Dargs,DYF,varList$pres)
+				psiMc<-transphi(phiMc,Dargs$transform.par)
+				fpred<-structural.model(psiMc, Dargs$IdM, Dargs$XM)
+				for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
+#				if(Dargs$error.model=="exponential")
+#					fpred<-log(cutoff(fpred))
+				gpred<-error(fpred,varList$pres,Dargs$XM$ytype)
+				DYF[Uargs$ind.ioM]<-0.5*((Dargs$yM-fpred)/gpred)**2+log(gpred)
+				Uc.y<-colSums(DYF) # Warning: Uc.y, Uc.eta = vecteurs
 				Uc.eta<-0.5*rowSums(etaMc*(etaMc%*%somega))
 				deltu<-Uc.y-U.y+Uc.eta-U.eta
 				ind<-which(deltu<(-log(runif(Dargs$NM))))

@@ -42,7 +42,7 @@
 #' 	  return(ypred)
 #' }
 #' saemix.model<-saemixModel(model=model1cpt,
-#'   description="One-compartment model with first-order absorption", type="structural",
+#'   description="One-compartment model with first-order absorption", 
 #'   psi0=matrix(c(1.,20,0.5,0.1,0,-0.01),ncol=3, byrow=TRUE,
 #'   dimnames=list(NULL, c("ka","V","CL"))),transform.par=c(1,1,1),
 #'   covariate.model=matrix(c(0,1,0,0,0,0),ncol=3,byrow=TRUE),fixed.estim=c(1,1,1),
@@ -137,12 +137,8 @@ llis.saemix<-function(saemixObject) {
 		for(i in idx.exp) f[saemix.data["data"][,"ytype"]==i]<-log(cutoff(f[saemix.data["data"][,"ytype"]==i]))
 #		if(saemix.model["error.model"]=="exponential")
 #			f<-log(cutoff(f))
-		if (saemixObject["model"]["type"]=="structural"){
-			g<-error(f,pres,XM$ytype)
-			DYF[ind.ioM] <- -0.5*((yM-f)/g)**2 - log(g) - 0.5*c1
-		} else {
-			DYF[ind.ioM] <- f
-		}
+		g<-error(f,pres,XM$ytype)
+		DYF[ind.ioM] <- -0.5*((yM-f)/g)**2 - log(g) - 0.5*c1
 		e1<-matrix(colSums(DYF),nrow=saemix.data["N"],ncol=MM)
 		sume<-e1+e2-e3
 		newa<-rowMeans(exp(sume),na.rm=TRUE)
@@ -156,6 +152,7 @@ llis.saemix<-function(saemixObject) {
 	x1<-MM*c(kmin:KM)
 	y1<-(-2)*LL[kmin:KM]
 	if(sum(!is.na(y1))) try(plot(x1,y1,type="l",xlab="Size of the Monte-Carlo sample", ylab="'-2xLog-Likelihood",main=tit)) else cat("Likelihood cannot be computed by Importance Sampling.\n")
+	
 	saemixObject["results"]["LL"]<-c(LL)
 	saemixObject["results"]["ll.is"]<-LL[KM]
 	saemixObject["results"]["aic.is"]<-(-2)*saemixObject["results"]["ll.is"]+ 2*saemixObject["results"]["npar.est"]
@@ -274,17 +271,11 @@ llgq.saemix<-function(saemixObject) {
 	for (j in 1:nx) {
 		phi[,i1.omega2] <- a+b*matrix(rep(x[j,],saemix.data["N"]),ncol=nphi1,byrow=TRUE)
 		psi<-transphi(phi,saemixObject["model"]["transform.par"])
-		if(saemixObject["model"]["type"]=="structural"){
-			f<-saemixObject["model"]["model"](psi, saemix.data["data"][,"index"], xind)
-			for(i in idx.exp) f[saemix.data["data"][,"ytype"]==i]<-log(cutoff(f[saemix.data["data"][,"ytype"]==i]))
-			g<-error(f,pres,saemix.data["data"][,"ytype"])
-			DYF[ind.io] <- -0.5*((yobs-f)/g)**2 - log(g)
-			ly<-colSums(DYF)
-		} else {
-			f<-saemixObject["model"]["model"](psi, saemix.data["data"][,"index"], xind)
-			DYF[ind.io] <- f
-			ly<-colSums(DYF)
-		}
+		f<-saemixObject["model"]["model"](psi, saemix.data["data"][,"index"], xind)
+		for(i in idx.exp) f[saemix.data["data"][,"ytype"]==i]<-log(cutoff(f[saemix.data["data"][,"ytype"]==i]))
+		g<-error(f,pres,saemix.data["data"][,"ytype"])
+		DYF[ind.io] <- -0.5*((yobs-f)/g)**2 - log(g)
+		ly<-colSums(DYF)
 		dphi1<-phi[,i1.omega2]-saemix.res["mean.phi"][,i1.omega2]
 		lphi1<-(-0.5)*rowSums((dphi1%*%IOmega.phi1)*dphi1)
 		ltot<-ly+lphi1

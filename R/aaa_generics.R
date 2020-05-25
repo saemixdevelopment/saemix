@@ -61,7 +61,7 @@ setGeneric(name="read",
 #' 	  return(ypred)
 #' }
 #' saemix.model<-saemixModel(model=model1cpt,
-#'   description="One-compartment model with first-order absorption", type="structural",
+#'   description="One-compartment model with first-order absorption", 
 #'   psi0=matrix(c(1.,20,0.5,0.1,0,-0.01),ncol=3, byrow=TRUE,
 #'   dimnames=list(NULL, c("ka","V","CL"))),transform.par=c(1,1,1),
 #'   covariate.model=matrix(c(0,1,0,0,0,0),ncol=3,byrow=TRUE),fixed.estim=c(1,1,1),
@@ -364,6 +364,6 @@ NULL
 #' These are not to be called by the user.
 #' 
 #' @name saemix.internal
-#' @aliases .First.lib plotnpde ssq error.typ
+#' @aliases .First.lib ssq error.typ
 #' @keywords internal
 NULL

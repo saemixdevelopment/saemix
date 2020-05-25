@@ -91,7 +91,7 @@
 #' }
 #' 
 #' saemix.model<-saemixModel(model=model1cpt,
-#'   description="One-compartment model with first-order absorption", type="structural",
+#'   description="One-compartment model with first-order absorption", 
 #'   psi0=matrix(c(1.,20,0.5,0.1,0,-0.01),ncol=3, byrow=TRUE,dimnames=list(NULL, 
 #'   c("ka","V","CL"))),transform.par=c(1,1,1), 
 #'   covariate.model=matrix(c(0,1,0,0,0,0),ncol=3,byrow=TRUE),fixed.estim=c(1,1,1),
@@ -113,6 +113,7 @@
 #' 
 #' 
 #' @export conddist.saemix
+
 conddist.saemix<-function(saemixObject,nsamp=1,max.iter=NULL,...) {
   # Estimate conditional means and estimates for the individual parameters PSI_i using the MCMC algorithm
   # nsamp= number of MCMC samples
@@ -180,12 +181,8 @@ conddist.saemix<-function(saemixObject,nsamp=1,max.iter=NULL,...) {
   fpred<-saemixObject["model"]["model"](psiM, IdM, XM)
   ind.exp<-which(saemix.model["error.model"]=="exponential")
   for(ityp in ind.exp) fpred[XM$ytype==ityp]<-log(cutoff(fpred[XM$ytype==ityp]))
-  if (saemixObject["model"]["type"]=="structural"){  
-    gpred<-error(fpred,pres,XM$ytype)
-    DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)^2+log(gpred)
-  } else {
-    DYF[ind.ioM]<- -fpred
-  }
+  gpred<-error(fpred,pres,XM$ytype)
+  DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)^2+log(gpred)
   U.y<-colSums(DYF)
   phiMc<-phiM
   
@@ -201,12 +198,8 @@ conddist.saemix<-function(saemixObject,nsamp=1,max.iter=NULL,...) {
       psiMc<-transphi(phiMc,saemixObject["model"]["transform.par"])
       fpred<-saemixObject["model"]["model"](psiMc, IdM, XM)
       for(ityp in ind.exp) fpred[XM$ytype==ityp]<-log(cutoff(fpred[XM$ytype==ityp]))
-      if (saemixObject["model"]["type"]=="structural"){  
-        gpred<-error(fpred,pres,XM$ytype)
-        DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)^2+log(gpred)
-      } else {
-        DYF[ind.ioM]<- -fpred
-      }
+      gpred<-error(fpred,pres,XM$ytype)
+      DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)^2+log(gpred)
       Uc.y<-colSums(DYF)
       deltau<-Uc.y-U.y
       ind<-which(deltau<(-1)*log(runif(NM)))
@@ -229,12 +222,8 @@ conddist.saemix<-function(saemixObject,nsamp=1,max.iter=NULL,...) {
           psiMc<-transphi(phiMc,saemixObject["model"]["transform.par"])
           fpred<-saemixObject["model"]["model"](psiMc, IdM, XM)
           for(ityp in ind.exp) fpred[XM$ytype==ityp]<-log(cutoff(fpred[XM$ytype==ityp]))
-          if (saemixObject["model"]["type"]=="structural"){  
-            gpred<-error(fpred,pres,XM$ytype)
-            DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)^2+log(gpred)
-          } else {
-            DYF[ind.ioM]<- -fpred
-          }
+          gpred<-error(fpred,pres,XM$ytype)
+          DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)**2+log(gpred)
           Uc.y<-colSums(DYF) # Warning: Uc.y, Uc.eta = vecteurs
           Uc.eta<-0.5*rowSums(etaMc*(etaMc%*%solve(omega.eta)))
           deltu<-Uc.y-U.y+Uc.eta-U.eta
@@ -269,12 +258,8 @@ conddist.saemix<-function(saemixObject,nsamp=1,max.iter=NULL,...) {
           psiMc<-transphi(phiMc,saemixObject["model"]["transform.par"])
           fpred<-saemixObject["model"]["model"](psiMc, IdM, XM)
           for(ityp in ind.exp) fpred[XM$ytype==ityp]<-log(cutoff(fpred[XM$ytype==ityp]))
-          if (saemixObject["model"]["type"]=="structural"){  
-            gpred<-error(fpred,pres,XM$ytype)
-            DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)^2+log(gpred)
-          } else {
-            DYF[ind.ioM]<- -fpred
-          }
+          gpred<-error(fpred,pres,XM$ytype)
+          DYF[ind.ioM]<-0.5*((yM-fpred)/gpred)**2+log(gpred)
           Uc.y<-colSums(DYF) # Warning: Uc.y, Uc.eta = vecteurs
           Uc.eta<-0.5*rowSums(etaMc*(etaMc%*%solve(omega.eta)))
           deltu<-Uc.y-U.y+Uc.eta-U.eta

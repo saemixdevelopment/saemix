@@ -53,7 +53,7 @@
 #' 	  return(ypred)
 #' }
 #' 
-#' saemix.model<-saemixModel(model=model1cpt,type="structural",
+#' saemix.model<-saemixModel(model=model1cpt,
 #'   description="One-compartment model with first-order absorption", 
 #'   psi0=matrix(c(1.,20,0.5,0.1,0,-0.01),ncol=3, byrow=TRUE,
 #'   dimnames=list(NULL, c("ka","V","CL"))),transform.par=c(1,1,1),
@@ -64,7 +64,7 @@
 #' 
 #' # Not run (strict time constraints for CRAN)
 #' # saemix.fit<-saemix(saemix.model,saemix.data,list(seed=632545,directory="newtheo",
-#' # save=FALSE,save.graphs=FALSE), type="structural")
+#' # save=FALSE,save.graphs=FALSE))
 #' 
 #' # Prints a summary of the results
 #' # print(saemix.fit)
@@ -95,11 +95,11 @@ saemix<-function(model,data,control=list()) {
       abline(v=K1)
     }
   }
-  if(class(model)!="SaemixModel") {
+  if(!is(model,"SaemixModel")) {
     cat("Please provide a valid model object (see the help page for SaemixModel)\n")
     return()
   }
-  if(class(data)!="SaemixData") {
+  if(!is(data,"SaemixData")) {
     cat("Please provide a valid data object (see the help page for SaemixData)\n")
     return()
   }
@@ -138,21 +138,12 @@ saemix<-function(model,data,control=list()) {
   betas<-betas.ini<-xinit$betas
   fixed.psi<-xinit$fixedpsi.ini
   var.eta<-varList$diag.omega
+  theta0<-c(fixed.psi,var.eta[Uargs$i1.omega2],varList$pres[Uargs$ind.res])
 
-  if (Dargs$type=="structural"){
-    theta0<-c(fixed.psi,var.eta[Uargs$i1.omega2],varList$pres[Uargs$ind.res])
-    parpop<-matrix(data=0,nrow=(saemix.options$nbiter.tot+1),ncol=(Uargs$nb.parameters+length(Uargs$i1.omega2)+length(saemix.model["indx.res"])))
-    colnames(parpop)<-c(saemix.model["name.modpar"], saemix.model["name.random"], saemix.model["name.sigma"][saemix.model["indx.res"]])
-    allpar<-matrix(data=0,nrow=(saemix.options$nbiter.tot+1), ncol=(Uargs$nb.betas+length(Uargs$i1.omega2)+length(saemix.model["indx.res"])))
-    colnames(allpar)<-c(saemix.model["name.fixed"],saemix.model["name.random"], saemix.model["name.sigma"][saemix.model["indx.res"]])
-  } else{
-    theta0<-c(fixed.psi,var.eta[Uargs$i1.omega2])
-    parpop<-matrix(data=0,nrow=(saemix.options$nbiter.tot+1),ncol=(Uargs$nb.parameters+length(Uargs$i1.omega2)))
-    colnames(parpop)<-c(saemix.model["name.modpar"], saemix.model["name.random"])
-    allpar<-matrix(data=0,nrow=(saemix.options$nbiter.tot+1), ncol=(Uargs$nb.betas+length(Uargs$i1.omega2)))
-    colnames(allpar)<-c(saemix.model["name.fixed"],saemix.model["name.random"])
-  }
-  
+  parpop<-matrix(data=0,nrow=(saemix.options$nbiter.tot+1),ncol=(Uargs$nb.parameters+length(Uargs$i1.omega2)+length(saemix.model["indx.res"])))
+  colnames(parpop)<-c(saemix.model["name.modpar"], saemix.model["name.random"], saemix.model["name.sigma"][saemix.model["indx.res"]])
+  allpar<-matrix(data=0,nrow=(saemix.options$nbiter.tot+1), ncol=(Uargs$nb.betas+length(Uargs$i1.omega2)+length(saemix.model["indx.res"])))
+  colnames(allpar)<-c(saemix.model["name.fixed"],saemix.model["name.random"], saemix.model["name.sigma"][saemix.model["indx.res"]])
   parpop[1,]<-theta0
   allpar[1,]<-xinit$allpar0
   
@@ -222,21 +213,11 @@ for (kiter in 1:saemix.options$nbiter.tot) { # Iterative portion of algorithm
   	l1<-betas.ini
   	l1[Uargs$indx.betaI]<-fixed.psi
   	l1[Uargs$indx.betaC]<-betaC
-
-    if(Dargs$type=="structural") {
-      allpar[(kiter+1),]<-c(l1,var.eta[Uargs$i1.omega2],varList$pres[Uargs$ind.res])
-    } else{
-      allpar[(kiter+1),]<-c(l1,var.eta[Uargs$i1.omega2])
-    }
-
+  	allpar[(kiter+1),]<-c(l1,var.eta[Uargs$i1.omega2],varList$pres[Uargs$ind.res])
   } else { #end of loop on if (stepsize[kiter]>0)
     allpar[(kiter+1),]<-allpar[kiter,]
   }
-   if(Dargs$type=="structural") {
-      theta<-c(fixed.psi,var.eta[Uargs$i1.omega2],varList$pres[Uargs$ind.res])
-    } else{
-      theta<-c(fixed.psi,var.eta[Uargs$i1.omega2])
-    }
+  theta<-c(fixed.psi,var.eta[Uargs$i1.omega2],varList$pres[Uargs$ind.res])
   parpop[(kiter+1),]<-theta
 
 # End of loop on kiter
@@ -244,6 +225,7 @@ for (kiter in 1:saemix.options$nbiter.tot) { # Iterative portion of algorithm
 etaM<-xmcmc$etaM # only need etaM here (re-created in estep otherwise)
 cat("\n    Minimisation finished\n")
 print(date())
+
 ############# After end of iterations
 fixed.effects<-0*betas
 fixed.effects[Uargs$indx.betaI]<-fixed.psi
@@ -278,11 +260,7 @@ cond.mean.eta<-t(apply(cond.mean.eta,c(1,2),mean))
   saemix.model["indx.omega"]<-Uargs$i1.omega2
 
 # Filling in result object
-  if(Dargs$type=="structural") {
-    saemix.res<-new(Class="SaemixRes",modeltype=Dargs$type,name.fixed=saemix.model["name.fixed"], name.random=saemix.model["name.random"],name.sigma=saemix.model["name.sigma"], fixed.effects=c(fixed.effects),fixed.psi=c(fixed.psi),betas=betas,betaC=betaC, omega=varList$omega,respar=varList$pres,cond.mean.phi=cond.mean.phi,cond.var.phi=cond.var.phi, mean.phi=mean.phi, phi=phi,phi.samp=phi.samp,parpop=parpop,allpar=allpar,MCOV=varList$MCOV)
-  } else{
-    saemix.res<-new(Class="SaemixRes",modeltype=Dargs$type,name.fixed=saemix.model["name.fixed"], name.random=saemix.model["name.random"],name.sigma=saemix.model["name.sigma"], fixed.effects=c(fixed.effects),fixed.psi=c(fixed.psi),betas=betas,betaC=betaC, omega=varList$omega,cond.mean.phi=cond.mean.phi,cond.var.phi=cond.var.phi, mean.phi=mean.phi, phi=phi,phi.samp=phi.samp,parpop=parpop,allpar=allpar,MCOV=varList$MCOV)
-  }
+    saemix.res<-new(Class="SaemixRes",name.fixed=saemix.model["name.fixed"], name.random=saemix.model["name.random"],name.sigma=saemix.model["name.sigma"], fixed.effects=c(fixed.effects),fixed.psi=c(fixed.psi),betas=betas,betaC=betaC, omega=varList$omega,respar=varList$pres,cond.mean.phi=cond.mean.phi,cond.var.phi=cond.var.phi, mean.phi=mean.phi, phi=phi,phi.samp=phi.samp,parpop=parpop,allpar=allpar,MCOV=varList$MCOV)
   saemix.res["indx.res"]<-Uargs$ind.res
   saemix.res["indx.fix"]<-Uargs$indx.betaI
   saemix.res["indx.cov"]<-Uargs$indx.betaC
@@ -301,17 +279,18 @@ cond.mean.eta<-t(apply(cond.mean.eta,c(1,2),mean))
 # a la fin: mais verifier, pe pb de distribution ??? ie allpar sur l'echelle des betas et pas parpop ? a verifier
 # saemix.res["allpar"]<-allpar
 # saemix.res["parpop"]<-allpar[,-c(indx.betaC)]
+
 #### Final computations
 # Compute the MAP estimates of the PSI_i's 
   if(saemix.options$map) saemixObject<-map.saemix(saemixObject)
-  
+
 # Compute the Fisher Information Matrix & update saemix.res
   if(saemix.options$fim) saemixObject<-fim.saemix(saemixObject)
 
 # Estimate the log-likelihood via importance Sampling/Gaussian quadrature
   if(saemix.options$ll.is) saemixObject<-llis.saemix(saemixObject)
   if(saemix.options$ll.gq) saemixObject<-llgq.saemix(saemixObject)
-
+  
 #### Pretty printing the results (TODO finish in particular cov2cor)
   if(saemix.options$print) print(saemixObject,digits=2)
 
@@ -340,7 +319,7 @@ cond.mean.eta<-t(apply(cond.mean.eta,c(1,2),mean))
   if(saemix.options$save) {
     namres<-ifelse(saemix.options$directory=="","pop_parameters.txt", file.path(saemix.options$directory,"pop_parameters.txt"))
     xtry<-try(sink(namres))
-    if(class(xtry)!="try-error") {
+    if(!is(xtry,"try-error")) {
     print(saemixObject)
     sink()
     namres<-ifelse(saemix.options$directory=="","indiv_parameters.txt", file.path(saemix.options$directory,"indiv_parameters.txt"))
@@ -350,13 +329,14 @@ cond.mean.eta<-t(apply(cond.mean.eta,c(1,2),mean))
        cat("Unable to save results, check writing permissions and/or path to directory.\n")
      }
   }
+
 # ECO TODO finish, adding all
   if(saemix.options$save.graphs) {
     saemixObject<-saemix.predict(saemixObject)
     if(saemix.options$directory=="") namgr<-"diagnostic_graphs.ps" else
       namgr<-file.path(saemix.options$directory,"diagnostic_graphs.ps")
     xtry<-try(postscript(namgr,horizontal=TRUE))
-    if(class(xtry)!="try-error") {
+    if(!is(xtry,"try-error")) {
     par(mfrow=c(1,1))
     try(plot(saemixObject,plot.type="data"))
 
@@ -389,5 +369,6 @@ cond.mean.eta<-t(apply(cond.mean.eta,c(1,2),mean))
   }
 
   options(warn=opt.warn)
+
   return(saemixObject)
 }

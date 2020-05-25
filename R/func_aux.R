@@ -43,7 +43,7 @@
 #' }
 #' 
 #' saemix.model<-saemixModel(model=model1cpt,
-#'   description="One-compartment model with first-order absorption", type="structural",
+#'   description="One-compartment model with first-order absorption", 
 #'   psi0=matrix(c(1.,20,0.5,0.1,0,-0.01),ncol=3, byrow=TRUE,
 #'   dimnames=list(NULL, c("ka","V","CL"))),transform.par=c(1,1,1),
 #'   covariate.model=matrix(c(0,1,0,0,0,0),ncol=3,byrow=TRUE),fixed.estim=c(1,1,1),
@@ -83,11 +83,7 @@ map.saemix<-function(saemixObject) {
     mean.phi1<-saemixObject["results"]["mean.phi"][i,i1.omega2]
     phii<-saemixObject["results"]["phi"][i,]
     phi1<-phii[i1.omega2]
-    if(saemixObject["model"]["type"]=="structural"){
-      phi1.opti<-optim(par=phi1, fn=conditional.distribution_c, phii=phii,idi=idi,xi=xi,yi=yi,mphi=mean.phi1,idx=i1.omega2,iomega=iomega.phi1, trpar=saemixObject["model"]["transform.par"], model=saemixObject["model"]["model"], pres=saemixObject["results"]["respar"], err=saemixObject["model"]["error.model"])
-    } else {
-      phi1.opti<-optim(par=phi1, fn=conditional.distribution_d, phii=phii,idi=idi,xi=xi,yi=yi,mphi=mean.phi1,idx=i1.omega2,iomega=iomega.phi1, trpar=saemixObject["model"]["transform.par"], model=saemixObject["model"]["model"])
-    }
+    phi1.opti<-optim(par=phi1, fn=conditional.distribution, phii=phii,idi=idi,xi=xi,yi=yi,mphi=mean.phi1,idx=i1.omega2,iomega=iomega.phi1, trpar=saemixObject["model"]["transform.par"], model=saemixObject["model"]["model"], pres=saemixObject["results"]["respar"], err=saemixObject["model"]["error.model"])
     phi.map[i,i1.omega2]<-phi1.opti$par
   }
   cat("\n")
@@ -318,44 +314,21 @@ dtransphi<-function(phi,tr) {
   return(dpsi)
 }
 
-
 compute.Uy<-function(b0,phiM,pres,args,Dargs,DYF) {
 # Attention, DYF variable locale non modifiee en dehors
   args$MCOV0[args$j0.covariate]<-b0
   phi0<-args$COV0 %*% args$MCOV0
   phiM[,args$i0.omega2]<-do.call(rbind,rep(list(phi0),args$nchains))
   psiM<-transphi(phiM,Dargs$transform.par)
-  if (Dargs$type=="structural"){
-    fpred<-Dargs$structural.model(psiM,Dargs$IdM,Dargs$XM)
-    for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
-    gpred<-error(fpred,pres,Dargs$XM$ytype)
-    DYF[args$ind.ioM]<-0.5*((Dargs$yM-fpred)/gpred)**2+log(gpred)
-  } else {
-    fpred<-Dargs$structural.model(psiM,Dargs$IdM,Dargs$XM)
-    for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
-    DYF[args$ind.ioM]<- -fpred
-  }
+  fpred<-Dargs$structural.model(psiM,Dargs$IdM,Dargs$XM)
+  for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
+  gpred<-error(fpred,pres,Dargs$XM$ytype)
+  DYF[args$ind.ioM]<-0.5*((Dargs$yM-fpred)/gpred)**2+log(gpred)
   U<-sum(DYF)
   return(U)
 }
 
-compute.LLy<-function(phiM,args,Dargs,DYF,pres) {
-  psiM<-transphi(phiM,Dargs$transform.par)
-  fpred<-Dargs$structural.model(psiM,Dargs$IdM,Dargs$XM)
-  for(ityp in Dargs$etype.exp) fpred[Dargs$XM$ytype==ityp]<-log(cutoff(fpred[Dargs$XM$ytype==ityp]))
-  if (Dargs$type=="structural"){
-    gpred<-error(fpred,pres,Dargs$XM$ytype)
-    DYF[args$ind.ioM]<-0.5*((Dargs$yM-fpred)/gpred)**2+log(gpred)
-  } else {
-    DYF[args$ind.ioM]<- -fpred
-  }
-  U<-colSums(DYF)
-  return(U)
-}
-
-
-
-conditional.distribution_c<-function(phi1,phii,idi,xi,yi,mphi,idx,iomega,trpar,model,pres,err) {
+conditional.distribution<-function(phi1,phii,idi,xi,yi,mphi,idx,iomega,trpar,model,pres,err) {
   phii[idx]<-phi1
   psii<-transphi(matrix(phii,nrow=1),trpar)
   if(is.null(dim(psii))) psii<-matrix(psii,nrow=1)
@@ -368,19 +341,6 @@ conditional.distribution_c<-function(phi1,phii,idi,xi,yi,mphi,idx,iomega,trpar,m
   Uphi<-0.5*sum(dphi*(dphi%*%iomega))
   return(Uy+Uphi)
 }
-
-
-conditional.distribution_d<-function(phi1,phii,idi,xi,yi,mphi,idx,iomega,trpar,model) {
-  phii[idx]<-phi1
-  psii<-transphi(matrix(phii,nrow=1),trpar)
-  if(is.null(dim(psii))) psii<-matrix(psii,nrow=1)
-  fi<-model(psii,idi,xi)
-  Uy <- sum(-fi)
-  dphi<- phi1-mphi
-  Uphi<- 0.5*sum(dphi*(dphi%*%iomega))
-  return(Uy+Uphi)
-}
-
 
 trnd.mlx<-function(v,n,m) {
   r<-rnorm(n*m)*sqrt(v/2/gammarnd.mlx(v/2,n,m))
